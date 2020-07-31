@@ -1,0 +1,65 @@
+{
+  "name": "alain-bot",
+  "version": "1.0.0",
+  "description": "NG-ALAIN Bot is a bot that helps the project by doing all kind of administrative tasks on our PR and issues.",
+  "author": "cipchk <cipchk@qq.com>",
+  "license": "MIT",
+  "repository": "https://github.com/ng-alain/bot.git",
+  "homepage": "https://github.com/ng-alain/bot",
+  "bugs": "https://github.com/ng-alain/bot/issues",
+  "keywords": [
+    "probot",
+    "github",
+    "probot-app"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "nodemon --exec \"npm start\"",
+    "start": "probot run ./lib/index.js",
+    "probot-config": "probot run ./lib/index.js",
+    "lint": "standard **/*.ts --fix",
+    "test": "jest && standard **/*.ts",
+    "test:watch": "jest --watch --notify --notifyMode=change --coverage"
+  },
+  "dependencies": {
+    "@types/uuid": "^3.4.4",
+    "@vitalets/google-translate-api": "^2.8.0",
+    "axios": "^0.19.0",
+    "js-yaml": "^3.13.1",
+    "kmp": "^0.0.3",
+    "nock": "^10.0.0",
+    "probot": "^7.2.0",
+    "string-template": "^1.0.0",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.0",
+    "@types/js-yaml": "^3.12.1",
+    "@types/nock": "^9.3.0",
+    "@types/node": "^11.9.0",
+    "@types/string-template": "^1.0.2",
+    "eslint-plugin-typescript": "^0.14.0",
+    "jest": "^24.0.0",
+    "nodemon": "^1.17.2",
+    "smee-client": "^1.0.2",
+    "standard": "^12.0.1",
+    "ts-jest": "^24.0.0",
+    "typescript": "^3.3.1",
+    "typescript-eslint-parser": "^22.0.0"
+  },
+  "engines": {
+    "node": ">= 8.3.0"
+  },
+  "standard": {
+    "parser": "typescript-eslint-parser",
+    "env": [
+      "jest"
+    ],
+    "plugins": [
+      "typescript"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}
