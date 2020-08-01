@@ -1,4 +1,6 @@
-/yarn.lock
 /node_modules
 .env
 /lib
+.vercel
+/dist
+/private-key.pem.prod
