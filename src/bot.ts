@@ -3,9 +3,10 @@ import { LoggerWithTarget } from "probot/lib/wrap-logger";
 import format from "string-template";
 
 import { Config } from "./interfaces/config.interface";
-import { OrgsListMembersResponseItem } from "@octokit/rest";
+import { Octokit } from "@octokit/rest";
+// import { v2 } from "@google-cloud/translate";
+// const translate = new v2.Translate({ projectId: "458602011089" });
 
-const translate = require("@vitalets/google-translate-api");
 const kmp = require("kmp");
 const axios = require("axios");
 
@@ -50,7 +51,7 @@ export class Bot {
 
       try {
         if (this.context.event.search("pull_request") !== -1) {
-          await this.context.github.pullRequests.createReviewRequest(
+          await this.context.github.pulls.createReviewRequest(
             this.context.issue({ reviewers: assignees })
           );
         } else {
@@ -172,52 +173,52 @@ export class Bot {
     }
   }
 
-  async replyTranslate() {
-    const config = this.config.issue.translate;
-    const issue = this.context.payload.issue;
-    if (containsChinese(issue.title)) {
-      const body = await translate(issue.body.replace(/<!--(.*?)-->/g, ""), {
-        from: "zh-CN",
-        to: "en",
-      });
-      const title = await translate(issue.title, { from: "zh-CN", to: "en" });
-      if (body.text && title.text) {
-        let content = format(config.replay, {
-          title: title.text,
-          body: body.text,
-        });
-        const issueComment = this.context.issue({ body: content });
+  // async replyTranslate() {
+  //   const config = this.config.issue.translate;
+  //   const issue = this.context.payload.issue;
+  //   if (containsChinese(issue.title)) {
+  //     const [body] = await translate.translate(
+  //       issue.body.replace(/<!--(.*?)-->/g, ""),
+  //       "en"
+  //     );
+  //     const [title] = await translate.translate(issue.title, "en");
+  //     if (body && title) {
+  //       let content = format(config.replay, {
+  //         title: title,
+  //         body: body,
+  //       });
+  //       const issueComment = this.context.issue({ body: content });
 
-        this.log.trace(
-          {
-            issue,
-            issueComment,
-          },
-          "translating issue..."
-        );
+  //       this.log.trace(
+  //         {
+  //           issue,
+  //           issueComment,
+  //         },
+  //         "translating issue..."
+  //       );
 
-        try {
-          await this.context.github.issues.createComment(issueComment);
-          this.log.info(
-            {
-              issue,
-              issueComment,
-            },
-            "translated issue."
-          );
-        } catch (e) {
-          this.log.error(
-            {
-              error: new Error(e),
-              issue,
-              issueComment,
-            },
-            "translate issue error!"
-          );
-        }
-      }
-    }
-  }
+  //       try {
+  //         await this.context.github.issues.createComment(issueComment);
+  //         this.log.info(
+  //           {
+  //             issue,
+  //             issueComment,
+  //           },
+  //           "translated issue."
+  //         );
+  //       } catch (e) {
+  //         this.log.error(
+  //           {
+  //             error: new Error(e),
+  //             issue,
+  //             issueComment,
+  //           },
+  //           "translate issue error!"
+  //         );
+  //       }
+  //     }
+  //   }
+  // }
 
   async replyNeedReproduce() {
     const config = this.config.issue.needReproduce;
@@ -377,7 +378,7 @@ export class Bot {
   }
 
   private async getMembers(): Promise<string[]> {
-    let members: OrgsListMembersResponseItem[] = [];
+    let members: Octokit.OrgsListMembersResponseItem[] = [];
     const repo = this.context.repo();
     let response = await this.context.github.orgs.listMembers({
       org: repo.owner,
