@@ -1,52 +1,28 @@
 import { Application, Context } from "probot";
 import { LoggerWithTarget } from "probot/lib/wrap-logger";
 
-// import { Bot } from "./bot";
+import { Bot } from "./bot";
 import { Config } from "./interfaces/config.interface";
 
 export = async (app: Application) => {
   const github = await app.auth();
   const name = (await github.apps.getAuthenticated({})).data.name;
 
-  // app.on("release.published", async (context) => {
-  //   const logger = getLogger(context);
-  //   const config = await getConfig(context, logger);
-  //   const bot = new Bot(context, config, logger);
-  //   await bot.sendRelease();
-  // });
-
-  // app.on("pull_request.opened", async (context) => {
-  //   const logger = getLogger(context);
-  //   const config = await getConfig(context, logger);
-  //   const bot = new Bot(context, config, logger);
-  //   await bot.commentPreview();
-  // });
-
   app.on("issues.opened", async (context) => {
-    console.log(context);
-    // const logger = getLogger(context);
-    // const config = await getConfig(context, logger);
-    // const bot = new Bot(context, config, logger);
-    // await bot.replyInvalid();
-    // // await bot.replyTranslate();
-    // // await bot.addComponentLabel();
+    const logger = getLogger(context);
+    const config = await getConfig(context, logger);
+    const bot = new Bot(context, config, logger);
+    await bot.replyInvalid();
+    await bot.replyTranslate();
   });
 
   app.on("issues.labeled", async (context) => {
-    console.log(context);
-    // const logger = getLogger(context);
-    // const config = await getConfig(context, logger);
-    // const bot = new Bot(context, config, logger);
-    // await bot.replyNeedReproduce();
-    // await bot.replyLabeled();
+    const logger = getLogger(context);
+    const config = await getConfig(context, logger);
+    const bot = new Bot(context, config, logger);
+    await bot.replyNeedReproduce();
+    await bot.replyLabeled();
   });
-
-  // app.on(["issues.labeled", "pull_request.labeled"], async (context) => {
-  //   const logger = getLogger(context);
-  //   const config = await getConfig(context, logger);
-  //   const bot = new Bot(context, config, logger);
-  //   await bot.assignOwner();
-  // });
 
   async function getConfig(
     context: Context,
@@ -57,7 +33,6 @@ export = async (app: Application) => {
     const file = "alain-bot.yml";
     try {
       config = await context.config(file);
-      log.warn("getConfig", config);
     } catch (e) {
       log.warn(
         {

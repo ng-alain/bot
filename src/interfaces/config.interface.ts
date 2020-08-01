@@ -1,12 +1,12 @@
 export interface Config {
-  issue: IssueConfig
-  pullRequest: PullRequestConfig
+  issue: IssueConfig;
+  pullRequest: PullRequestConfig;
 }
 
 export interface PullRequestConfig {
   preview: {
-    replay: string
-  }
+    replay: string;
+  };
 }
 
 export interface IssueConfig {
@@ -23,16 +23,16 @@ export interface IssueConfig {
     labelTemplate: string;
     components: {
       [component: string]: string;
-    }
+    };
   };
   needReproduce: {
     label: string;
     afterLabel: string;
     replay: string;
-  }
+  };
 }
 
-export  interface LabeledReplayItem {
+export interface LabeledReplayItem {
   labels: string[];
   replay: string;
 }

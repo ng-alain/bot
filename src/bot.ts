@@ -1,14 +1,10 @@
 import { Context } from "probot";
 import { LoggerWithTarget } from "probot/lib/wrap-logger";
 import format from "string-template";
-
 import { Config } from "./interfaces/config.interface";
 import { Octokit } from "@octokit/rest";
-// import { v2 } from "@google-cloud/translate";
-// const translate = new v2.Translate({ projectId: "458602011089" });
 
-const kmp = require("kmp");
-const axios = require("axios");
+const translate = require("@vitalets/google-translate-api");
 
 function isDev(): boolean {
   return process && process.env && process.env.DEV === "true";
@@ -25,114 +21,12 @@ export class Bot {
     private log: LoggerWithTarget
   ) {}
 
-  async assignOwner() {
-    const config = this.config.issue.assignOwner;
-    const label = this.context.payload.label.name;
-    const issue = this.context.payload.issue;
-    const assignees: string[] = [];
-
-    Object.keys(config.components).forEach((component) => {
-      if (
-        format(config.labelTemplate, { component }).toLowerCase() ===
-        label.toLowerCase()
-      ) {
-        assignees.push(config.components[component]);
-      }
-    });
-
-    if (assignees.length) {
-      this.log.trace(
-        {
-          label,
-          issue,
-        },
-        "assigning owner..."
-      );
-
-      try {
-        if (this.context.event.search("pull_request") !== -1) {
-          await this.context.github.pulls.createReviewRequest(
-            this.context.issue({ reviewers: assignees })
-          );
-        } else {
-          await this.context.github.issues.addAssignees(
-            this.context.issue({ assignees })
-          );
-        }
-        this.log.info(
-          {
-            assignees,
-          },
-          "assigned owner."
-        );
-      } catch (e) {
-        this.log.error(
-          {
-            error: new Error(e),
-            issue,
-            assignees,
-          },
-          "assign owner error!"
-        );
-      }
-    }
-  }
-
-  async addComponentLabel() {
-    const invalidConfig = this.config.issue.invalid;
-    const config = this.config.issue.assignOwner;
-    const components = Object.keys(config.components);
-    const issue = this.context.payload.issue;
-    let label: string | null = null;
-    if (!issue.body.includes(invalidConfig.mark)) {
-      return;
-    }
-    const title = issue.title
-      .replace(/[\u4e00-\u9fa5]/g, " ")
-      .replace(/(-)/g, "")
-      .toLowerCase();
-
-    for (let i = 0; i < components.length; i++) {
-      const component = components[i];
-      if (kmp(title, component.toLowerCase()) !== -1) {
-        label = format(config.labelTemplate, { component });
-        break;
-      }
-    }
-
-    if (label) {
-      this.log.trace(
-        {
-          issue,
-          label,
-        },
-        "adding component label..."
-      );
-
-      try {
-        await this.context.github.issues.addLabels(
-          this.context.issue({ labels: [label] })
-        );
-        this.log.info(
-          {
-            issue,
-          },
-          "component labeled."
-        );
-      } catch (e) {
-        this.log.error(
-          {
-            error: new Error(e),
-            issue,
-          },
-          "add component error!"
-        );
-      }
-    }
-  }
-
+  /**
+   * 回复指定 Labeled
+   */
   async replyLabeled() {
     const configs = this.config.issue.labeledReplay;
+    if (!configs) return;
     const label = this.context.payload.label.name;
     const issue = this.context.payload.issue;
     const opener = issue.user.login;
@@ -173,53 +67,59 @@ export class Bot {
     }
   }
 
-  // async replyTranslate() {
-  //   const config = this.config.issue.translate;
-  //   const issue = this.context.payload.issue;
-  //   if (containsChinese(issue.title)) {
-  //     const [body] = await translate.translate(
-  //       issue.body.replace(/<!--(.*?)-->/g, ""),
-  //       "en"
-  //     );
-  //     const [title] = await translate.translate(issue.title, "en");
-  //     if (body && title) {
-  //       let content = format(config.replay, {
-  //         title: title,
-  //         body: body,
-  //       });
-  //       const issueComment = this.context.issue({ body: content });
+  /**
+   * 回复翻译
+   */
+  async replyTranslate() {
+    const config = this.config.issue.translate;
+    const issue = this.context.payload.issue;
+    if (containsChinese(issue.title)) {
+      const body = await translate(issue.body.replace(/<!--(.*?)-->/g, ""), {
+        from: "zh-CN",
+        to: "en",
+      });
+      const title = await translate(issue.title, { from: "zh-CN", to: "en" });
+      if (body.text && title.text) {
+        let content = format(config.replay, {
+          title: title.text,
+          body: body.text,
+        });
+        const issueComment = this.context.issue({ body: content });
 
-  //       this.log.trace(
-  //         {
-  //           issue,
-  //           issueComment,
-  //         },
-  //         "translating issue..."
-  //       );
+        this.log.trace(
+          {
+            issue,
+            issueComment,
+          },
+          "translating issue..."
+        );
 
-  //       try {
-  //         await this.context.github.issues.createComment(issueComment);
-  //         this.log.info(
-  //           {
-  //             issue,
-  //             issueComment,
-  //           },
-  //           "translated issue."
-  //         );
-  //       } catch (e) {
-  //         this.log.error(
-  //           {
-  //             error: new Error(e),
-  //             issue,
-  //             issueComment,
-  //           },
-  //           "translate issue error!"
-  //         );
-  //       }
-  //     }
-  //   }
-  // }
+        try {
+          await this.context.github.issues.createComment(issueComment);
+          this.log.info(
+            {
+              issue,
+              issueComment,
+            },
+            "translated issue."
+          );
+        } catch (e) {
+          this.log.error(
+            {
+              error: new Error(e),
+              issue,
+              issueComment,
+            },
+            "translate issue error!"
+          );
+        }
+      }
+    }
+  }
 
+  /**
+   * 回复需要重现链接
+   */
   async replyNeedReproduce() {
     const config = this.config.issue.needReproduce;
     const label = this.context.payload.label.name;
@@ -269,6 +169,9 @@ export class Bot {
     }
   }
 
+  /**
+   * 回复所有非 ng-alain-issue-help 创建的 Issues
+   */
   async replyInvalid() {
     const config = this.config.issue.invalid;
     const isMember = await this.isMember();
@@ -318,53 +221,6 @@ export class Bot {
         );
       }
     }
-  }
-
-  async commentPreview() {
-    if (
-      this.config &&
-      this.config.pullRequest &&
-      this.config.pullRequest.preview
-    ) {
-      const replay = this.config.pullRequest.preview.replay;
-      const number = this.context.payload.number;
-      const pullRequest = this.context.payload.pull_request;
-      const issueComment = this.context.issue({
-        body: format(replay, { number }),
-      });
-      try {
-        await this.context.github.issues.createComment(issueComment);
-
-        this.log.trace(
-          {
-            pullRequest,
-          },
-          "Comment preview url..."
-        );
-      } catch (e) {
-        this.log.error(
-          {
-            error: new Error(e),
-            pullRequest,
-          },
-          "Comment preview error!"
-        );
-      }
-    }
-  }
-
-  async sendRelease() {
-    const release = this.context.payload.release;
-    axios.post(
-      `https://oapi.dingtalk.com/robot/send?access_token=${process.env.DINGTALK_TOKEN}`,
-      {
-        msgtype: "markdown",
-        markdown: {
-          title: `${release.name} 发布`,
-          text: `# ${release.name} 发布日志 \n\n ${release.body}`,
-        },
-      }
-    );
   }
 
   private async isMember(): Promise<boolean> {
